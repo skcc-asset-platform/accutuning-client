@@ -74,3 +74,88 @@ class Client:
             }
         '''
         result = GraphQL.execute(query, {'id': experiment.get('id')})
+
+    def leaderboard(self, experiment):
+        '''
+        입력받은 experiment의 leaderboard를 리턴한다. 
+        leaderboard = models로 할지, leaderboard에서 또 models를 구할지 고민 필요 
+        TODO Experiment 객체로 옮길 예정
+        '''
+        query = '''
+            query getLeaderboard($id: Int!) {
+                runtime(id: $id) {
+                    leaderboard {
+                        id
+                        score
+                        trainScore
+                        validScore
+                        testScore
+                        estimatorName
+                        generator
+                        file {
+                            size
+                            sizeHumanized
+                        }
+                        deployedStatus
+                    }
+                }
+            }
+        '''
+        result = GraphQL.execute(query, {'id': experiment.get('id')})
+        return result.get('runtime').get('leaderboard')
+
+    def deploy(self, model): 
+        '''
+        입력받은 model을 deploy한다. 
+        TODO Model 객체로 옮길 예정 
+        '''
+        query = '''
+            mutation mutateDeployment($modelId: ID!, $modelType: String!) {
+                deployModel(modelId: $modelId, modelType: $modelType) {
+                    deployment {
+                        id
+                        model {
+                        id
+                        __typename
+                        deployedStatus
+                        }
+                    }
+                }
+            }
+        '''
+        GraphQL.execute(query, {'modelId': model.get('id'), 'modelType': 'ensemble' if model.get('generator') == 'ensemble' else 'model'})
+
+    def deployments(self, experiment): 
+        '''
+        입력받은 experiment의 Deployments를 구한다. 
+        TODO Experiment 객체로 옮길 예정 
+        '''
+        query = '''
+            query runtimeDeployments($id: Int! $first: Int $skip: Int) {
+                deployments(runtimeId: $id, first: $first, skip: $skip) {
+                    id
+                    name
+                    description
+                    status
+                    modelType
+                    modelPk
+                    allMetricsJson
+                    createdAt
+                    testScore
+                    model {
+                        id
+                        trainScore
+                        validScore
+                    }
+                    file:pipelineFp {
+                        url
+                        size
+                        sizeHumanized
+                        name
+                    }
+                }
+            }
+        '''
+        result = GraphQL.execute(query, {'id': experiment.get('id')})
+        print(result)
+        return result.get('deployments')

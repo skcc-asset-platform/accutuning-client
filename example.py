@@ -14,14 +14,37 @@ print(sources)
 
 # Source 선택
 source = sources[0]
-# source.create_experiment()
 # client.create_experiment(source) 
 
+# Experiment 선택
 experiment = experiments[0]
 print(experiment)
 print(experiment.get('id'))
 
 if experiment.get('status') == 'ready': # Validation을 여기서 할 건 아닌데, 일단 걸어놓음. 
+    # Run AutoML 
     client.run(experiment)
 else:
-    print('실행 가능한 상태가 아님')
+    print('Run 실행 가능한 상태가 아님')
+
+if experiment.get('status') == 'finished': 
+    # Leaderboard 정보 구해오기 
+    leaderboard = client.leaderboard(experiment)
+    print(f'leaderboad의 model 갯수는 {len(leaderboard)}')
+
+    model = leaderboard[0]
+    if model.get('deployedStatus') == None:
+        # 모델 배포
+        client.deploy(model)
+    
+else:
+    print('Leaderboard 실행 가능한 상태가 아님')
+
+if experiment.get('deploymentsCnt') > 0: 
+    # Deployement 정보 구해오기 
+    deployments = client.deployments(experiment)
+    print(f'배포된 모델은 {len(deployments)}개 입니다.')
+    deployed_model = deployments[0]
+    print(deployed_model)
+else:
+    print('deploy된 모델이 없음')
