@@ -1,9 +1,11 @@
-from enum import Enum 
+from enum import Enum
+
 
 class Estimator(Enum):
     CLASSIFIER = 'CLASSIFIER'
     REGRESSOR = 'REGRESSOR'
     CLUSTERING = 'CLUSTERING'
+
 
 class Sklearn(Enum):
     IRIS = 'iris'

@@ -1,8 +1,10 @@
-import asyncio 
-import requests, json
+import asyncio
+import requests
+import json
+
 
 class GraphQL:
-    endpoint_url = 'http://localhost:8000/api/graphql' # TODO static val, singleton으로 최초 instance 생성시 셋팅하게 처리 
+    endpoint_url = 'http://localhost:8000/api/graphql'  # TODO static val, singleton으로 최초 instance 생성시 셋팅하게 처리
 
     @classmethod
     async def execute_async(cls, query, param={}):
@@ -25,23 +27,22 @@ class GraphQL:
     def execute(cls, query, param={}):
         return asyncio.run(cls.execute_async(query, param))
 
+
 # REST는 이렇게 씌울 필요가 있을까, 그냥 requests에서 바로 가져다 쓰는 것은...
-class REST: 
-    api_url = 'http://localhost:8000/api'   # TODO static val, singleton으로 최초 instance 생성시 셋팅하게 처리 
+class REST:
+    api_url = 'http://localhost:8000/api'   # TODO static val, singleton으로 최초 instance 생성시 셋팅하게 처리
 
     @classmethod
     def get(cls, url):
-        res = requests.get(cls.api_url+url)
+        res = requests.get(cls.api_url + url)
         if res.status_code == 200:
             obj = json.loads(res.text)
             print(obj)
             return obj
         else:
-            return '' # TODO 에러 발생시켜야 함
+            return ''  # TODO 에러 발생시켜야 함
 
     @classmethod
-    def post(cls, url, param): 
-        res = requests.post(cls.api_url+url, data=param)
+    def post(cls, url, param):
+        res = requests.post(cls.api_url + url, data=param)
         print(res)
-    
-    
