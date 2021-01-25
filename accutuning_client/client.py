@@ -1,4 +1,4 @@
-from util import GraphQL, REST
+from .util import GraphQL, REST
 
 class Client:
     '''

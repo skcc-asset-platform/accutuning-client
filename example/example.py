@@ -1,6 +1,7 @@
-from client import Client
+from accutuning_client.client import Client
 
 client = Client()
+# client.login(id, password)
 
 # Experiment의 List를 불러온다.
 experiments = client.experiments()
