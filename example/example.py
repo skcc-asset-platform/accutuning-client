@@ -1,3 +1,4 @@
+from accutuning_client.category import Sklearn
 from accutuning_client.client import Client
 
 client = Client('localhost', 8000)
@@ -16,6 +17,11 @@ print(sources)
 # Source 선택
 source = sources[0]
 # client.create_experiment(source)
+
+# Sklearn dataset에서 Source를 생성한다.
+client.create_source_from_sklearn(Sklearn.BOSTON)
+
+# client.create_source_from_file('/Users/ahaljh/Downloads/diabetes2.csv')  # 아직 안됨
 
 # Experiment 선택
 experiment = experiments[0]
@@ -50,13 +56,12 @@ if experiment.get('deploymentsCnt') > 0:
 
     # 예측
     # 일단 최빈값
-    mostfrequent, target_name = client.mostfrequent(experiment)
+    mostfrequent = client.mostfrequent(experiment)
     print(mostfrequent)
-    print(target_name)
-    input_val = {col.get('name'): col.get('mostFrequent') for col in mostfrequent if col.get('name') != target_name}
+    input_val = {col.get('name'): col.get('mostFrequent') for col in mostfrequent}
     print(input_val)
 
-    predict_val = client.predict(deployed_model, input_val, '3')
+    predict_val = client.predict(deployed_model, input_val, experiment.get('id'))
     print(f'예측값은 {predict_val} 입니다.')
 else:
     print('deploy된 모델이 없음')

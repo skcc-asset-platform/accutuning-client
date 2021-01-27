@@ -1,3 +1,4 @@
+from accutuning_client.category import Sklearn
 from time import sleep
 from .util import GraphQL, REST
 
@@ -8,15 +9,17 @@ class Client:
     '''
 
     def __init__(self, server_ip, server_port):
-        self._graphql_endpoint = f'http://{server_ip}:{server_port}/api/graphql'
-        self._rest_api_url = f'http://{server_ip}:{server_port}/api'
+        self._graphql = GraphQL(f'http://{server_ip}:{server_port}/api/graphql')
+        self._rest = REST(f'http://{server_ip}:{server_port}/api')
+        # self._graphql_endpoint = f'http://{server_ip}:{server_port}/api/graphql'
+        # self._rest_api_url = f'http://{server_ip}:{server_port}/api'
 
     def login(self, id, password):
-        res = REST.post(self._rest_api_url + '/token-auth/', {'username': 'autoinsight', 'password': 'autoinsight'})
+        res = self._rest.post('/token-auth/', {'username': id, 'password': password})
         print(res)
         print(type(res))
-        REST.add_login_info(res.get('token'))
-        GraphQL.add_login_info(res.get('token'))
+        self._rest.add_login_info(res.get('token'))
+        self._graphql.add_login_info(res.get('token'))
         return res
 
     def experiments(self):
@@ -42,14 +45,20 @@ class Client:
                 }
             }
         '''
-        result = GraphQL.execute(self._graphql_endpoint, query)
+        result = self._graphql.execute(query)
         return result.get('runtimes')
 
     def sources(self):
         '''
         전체 sources를 가져옴
         '''
-        return REST.get(self._rest_api_url + '/sources/')
+        return self._rest.get('/sources/')
+
+    def create_source_from_sklearn(self, sklearn_dataset: Sklearn):
+        self._rest.post('/sources/from_sklearn_dataset/', {'datasetName': sklearn_dataset.value})
+
+    def create_source_from_file(self, filepath):
+        self._rest.filepost('/sources/workspace_files/', filepath)
 
     def possible_container(self):   # TODO 컨테이너 갯수 정보가 있어야 할 꺼 같음, 이건 근데 매 호출시마다 먼저 구하는 것이 나을지도..
         pass
@@ -58,7 +67,7 @@ class Client:
         '''
         입력받은 source를 가지고 실험을 만든다. TODO 이거 Source 객체로 옮길 예정
         '''
-        REST.post(self._rest_api_url + f'/sources/{source.get("id")}/experiment/', source)  # TODO 성공/실패 여부 리턴
+        self._rest.post(f'/sources/{source.get("id")}/experiment/', source)  # TODO 성공/실패 여부 리턴
         # return True if res.status_code == 201 else False
 
     def run(self, experiment):
@@ -80,7 +89,7 @@ class Client:
                 }
             }
         '''
-        GraphQL.execute(self._graphql_endpoint, query, {'id': experiment.get('id')})
+        self._graphql.execute(query, {'id': experiment.get('id')})
 
     def leaderboard(self, experiment):
         '''
@@ -108,7 +117,7 @@ class Client:
                 }
             }
         '''
-        result = GraphQL.execute(self._graphql_endpoint, query, {'id': experiment.get('id')})
+        result = self._graphql.execute(query, {'id': experiment.get('id')})
         return result.get('runtime').get('leaderboard')
 
     def deploy(self, model):
@@ -130,7 +139,7 @@ class Client:
                 }
             }
         '''
-        GraphQL.execute(self._graphql_endpoint, query, {'modelId': model.get('id'), 'modelType': 'ensemble' if model.get('generator') == 'ensemble' else 'model'})
+        self._graphql.execute(query, {'modelId': model.get('id'), 'modelType': 'ensemble' if model.get('generator') == 'ensemble' else 'model'})
 
     def deployments(self, experiment):
         '''
@@ -163,7 +172,7 @@ class Client:
                 }
             }
         '''
-        result = GraphQL.execute(self._graphql_endpoint, query, {'id': experiment.get('id')})
+        result = self._graphql.execute(query, {'id': experiment.get('id')})
         print(result)
         return result.get('deployments')
 
@@ -191,22 +200,19 @@ class Client:
                 }
             }
         '''
-        result = GraphQL.execute(self._graphql_endpoint, query, {'id': experiment.get('id')})
-        print(result)
-        return result.get('runtime').get('dataset').get('columns'), result.get('runtime').get('targetColumnName')
+        result = self._graphql.execute(query, {'id': experiment.get('id')})
+        columns = result.get('runtime').get('dataset').get('columns')
+        target_column_name = result.get('runtime').get('targetColumnName')
+        return [col for col in columns if col.get('name') != target_column_name]
 
     def predict(self, model, input, runtime_id):
         import json
         s = json.dumps(input)
         d = {}
         d['inputs'] = s
-        d['target_deployment_id'] = 1
+        d['target_deployment_id'] = model.get('id')
 
-        print(d)
-        res = REST.post(self._rest_api_url + f'/runtimes/{runtime_id}/deployment/predict/', d)
-        print(res)
-        print(type(res))
-
+        res = self._rest.post(f'/runtimes/{runtime_id}/deployment/predict/', d)
         prediction_pk = res.get('predictionPk')
 
         sleep(5)
@@ -221,14 +227,12 @@ class Client:
                 }
             }
         '''
-        result = GraphQL.execute(self._graphql_endpoint, query, {'id': prediction_pk})
-        print(result)
+        result = self._graphql.execute(query, {'id': prediction_pk})
 
         if not result.get('prediction').get('done'):
             for _ in range(3):
                 sleep(5)
-                print('모델 예측이 완료되지 않아 재조회')
-                result = GraphQL.execute(self._graphql_endpoint, query, {'id': prediction_pk})
+                result = self._graphql.execute(query, {'id': prediction_pk})
                 if result.get('prediction').get('done'):
                     break
 
