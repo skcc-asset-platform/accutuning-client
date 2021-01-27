@@ -1,6 +1,6 @@
 from accutuning_client.client import Client
 
-client = Client()
+client = Client('localhost', 8000)
 # client.login(id, password)
 
 # Experiment의 List를 불러온다.
@@ -47,5 +47,16 @@ if experiment.get('deploymentsCnt') > 0:
     print(f'배포된 모델은 {len(deployments)}개 입니다.')
     deployed_model = deployments[0]
     print(deployed_model)
+
+    # 예측
+    # 일단 최빈값
+    mostfrequent, target_name = client.mostfrequent(experiment)
+    print(mostfrequent)
+    print(target_name)
+    input_val = {col.get('name'): col.get('mostFrequent') for col in mostfrequent if col.get('name') != target_name}
+    print(input_val)
+
+    predict_val = client.predict(deployed_model, input_val, '3')
+    print(f'예측값은 {predict_val} 입니다.')
 else:
     print('deploy된 모델이 없음')
