@@ -1,10 +1,13 @@
-import asyncio
 from json.decoder import JSONDecodeError
 import requests
 import json
 
 
 class GraphQL:
+    '''
+    GraphQL 호출을 담당하는 클래스
+    '''
+
     _endpoint_url = ''
     _header = {'refresh-token': ''}
 
@@ -30,11 +33,24 @@ class GraphQL:
             return result
 
     def execute(self, query, param={}):
-        return asyncio.run(self.execute_async(query, param))
+        # return asyncio.run(self.execute_async(query, param))
+        from gql import Client, gql
+        from gql.transport.requests import RequestsHTTPTransport
+
+        transport = RequestsHTTPTransport(
+            url=self._endpoint_url, verify=True, retries=3, headers=self._header
+        )
+
+        client = Client(transport=transport, fetch_schema_from_transport=True)
+        result = client.execute(gql(query), variable_values=param)
+        return result
 
 
 # REST는 이렇게 씌울 필요가 있을까, 그냥 requests에서 바로 가져다 쓰는 것은...
 class REST:
+    '''
+    REST API를 호출하는 역할을 진행하는 클래스
+    '''
     _header = {'Accept': 'application/json', 'Content-Type': 'application/json;charset=UTF-8'}
 
     def __init__(self, api_url):
