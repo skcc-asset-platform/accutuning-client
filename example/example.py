@@ -21,7 +21,7 @@ source = sources[0]
 # Sklearn dataset에서 Source를 생성한다.
 client.create_source_from_sklearn(Sklearn.BOSTON)
 
-# client.create_source_from_file('/Users/ahaljh/Downloads/diabetes2.csv')  # 아직 안됨
+client.create_source_from_file('/Users/ahaljh/Downloads/diabetes2.csv')
 
 # Experiment 선택
 experiment = experiments[0]

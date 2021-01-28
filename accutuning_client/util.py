@@ -64,9 +64,18 @@ class REST:
             print(res.text)
             return res.status_code
 
-    # def filepost(self, url, filepath, param={}):
-    #     with open(filepath, 'rb') as f:
-    #         res = requests.post(self._api_url + url, files={'fileData': f}, data=param, headers={'content-type': 'application/x-www-form-urlencoded'})
-    #         print(res.status_code)
-    #         print(res.text)
-    #         return res.status_code
+    def filepost(self, url, filepath, param={}):
+        from pathlib import Path
+        filename = Path(filepath).name
+
+        result = ''
+        with open(filepath, 'rb') as f:
+            res = requests.post(self._api_url + url, files={'fileData': (filename, f, 'text/csv')}, data=param)
+            if res.ok:
+                result = res.text
+            else:
+                print(res.status_code)
+                print(res.text)
+                result = res.status_code + '|' + res.text
+
+        return result
