@@ -5,6 +5,10 @@ import json
 
 
 class GraphQL:
+    '''
+    GraphQL 호출을 담당하는 클래스
+    '''
+
     _endpoint_url = ''
     _header = {'refresh-token': ''}
 
@@ -35,6 +39,9 @@ class GraphQL:
 
 # REST는 이렇게 씌울 필요가 있을까, 그냥 requests에서 바로 가져다 쓰는 것은...
 class REST:
+    '''
+    REST API를 호출하는 역할을 진행하는 클래스
+    '''
     _header = {'Accept': 'application/json', 'Content-Type': 'application/json;charset=UTF-8'}
 
     def __init__(self, api_url):
