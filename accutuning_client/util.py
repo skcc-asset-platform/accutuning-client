@@ -9,14 +9,14 @@ class GraphQL:
     '''
 
     _endpoint_url = ''
-    _header = {'refresh-token': ''}
+    _header = {'Content-Type': 'application/json', 'refresh-token': ''}
 
-    def __init__(self, endpoint_url):
+    def __init__(self, endpoint_url, schema_validation=False):
         self._endpoint_url = endpoint_url
+        self._schema_validation = schema_validation  # GraphQL의 Schema Validation : 보안때문에 막아놓은 경우 False로 해야함
 
     def add_login_info(self, token):
-        self._header['Authorization'] = f'Bearer {token}'
-        print(f'Header:{self._header}')
+        self._header['Authorization'] = f'JWT {token}'
 
     async def execute_async(self, query, param={}):
         from gql import Client, gql
@@ -27,7 +27,7 @@ class GraphQL:
         # Using `async with` on the client will start a connection on the transport
         # and provide a `session` variable to execute queries on this connection
         async with Client(
-            transport=transport, fetch_schema_from_transport=True,
+            transport=transport, fetch_schema_from_transport=self._schema_validation,
         ) as session:
             result = await session.execute(gql(query), variable_values=param)
             return result
@@ -41,7 +41,7 @@ class GraphQL:
             url=self._endpoint_url, verify=True, retries=3, headers=self._header
         )
 
-        client = Client(transport=transport, fetch_schema_from_transport=True)
+        client = Client(transport=transport, fetch_schema_from_transport=self._schema_validation)
         result = client.execute(gql(query), variable_values=param)
         return result
 
