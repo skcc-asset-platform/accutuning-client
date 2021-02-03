@@ -70,6 +70,41 @@ class Client:
         self._rest.post(f'/sources/{source.get("id")}/experiment/', source)  # TODO 성공/실패 여부 리턴
         # return True if res.status_code == 201 else False
 
+    def preprocessor_config_recommend(self, experiment):
+        '''
+        데이터셋을 기반으로 Preprocessor 방법을 자동으로 추천받아 preprocessor config를 변경합니다.
+        '''
+        query = '''
+            mutation patchRecmdConfig($id:ID!) {
+                patchRecommendationConfig (id: $id) {
+                        dataset {
+                            id
+                            processingStatus
+                    }
+                }
+            }
+        '''
+        self._graphql.execute(query, {'id': experiment.get('id').get('runtime').get('dataset').get('id')})
+
+
+    def preprocess(self, experiment):
+        '''
+        지정된 preprocessor config 설정대로 전처리를 실시합니다.
+        '''
+        query = '''
+            mutation preprocess($id:ID!) {
+                preprocess (id: $id) {
+                    dataset {
+                        id
+                        processingStatus
+                    }
+                    error
+                    errorMessage
+                }
+            }
+        '''
+        self._graphql.execute(query, {'id': experiment.get('id').get('runtime').get('dataset').get('id')})
+
     def run(self, experiment):
         '''
         입력받은 experiment를 가지고 run automl을 수행한다.
