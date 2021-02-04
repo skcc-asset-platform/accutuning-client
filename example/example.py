@@ -29,6 +29,9 @@ print(experiment)
 print(experiment.get('id'))
 
 if experiment.get('status') == 'ready':  # Validation을 여기서 할 건 아닌데, 일단 걸어놓음.
+    # Preprocess before a Run
+    client.preprocessor_config_recommend(experiment)
+    client.preprocess(experiment)
     # Run AutoML
     client.run(experiment)
 else:
