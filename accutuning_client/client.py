@@ -84,7 +84,7 @@ class Client:
                 }
             }
         '''
-        self._graphql.execute(query, {'id': experiment.get('id').get('runtime').get('dataset').get('id')})
+        self._graphql.execute(query, {'id': experiment.get('dataset').get('id')})
 
 
     def preprocess(self, experiment):
@@ -103,7 +103,7 @@ class Client:
                 }
             }
         '''
-        self._graphql.execute(query, {'id': experiment.get('id').get('runtime').get('dataset').get('id')})
+        self._graphql.execute(query, {'id': experiment.get('dataset').get('id')})
 
     def run(self, experiment):
         '''
