@@ -4,16 +4,16 @@ import json
 
 
 class GraphQL:
-    '''
-    GraphQL 호출을 담당하는 클래스
-    '''
+    """GraphQL 호출을 담당하는 클래스"""
 
+    _instance = None
     _endpoint_url = ''
     _header = {'Content-Type': 'application/json', 'refresh-token': ''}
 
     def __init__(self, endpoint_url, schema_validation=False):
         self._endpoint_url = endpoint_url
         self._schema_validation = schema_validation  # GraphQL의 Schema Validation : 보안때문에 막아놓은 경우 False로 해야함
+        GraphQL._instance = self
 
     def add_login_info(self, token):
         self._header['Authorization'] = f'JWT {token}'
@@ -48,13 +48,14 @@ class GraphQL:
 
 # REST는 이렇게 씌울 필요가 있을까, 그냥 requests에서 바로 가져다 쓰는 것은...
 class REST:
-    '''
-    REST API를 호출하는 역할을 진행하는 클래스
-    '''
-    _header = {'Accept': 'application/json', 'Content-Type': 'application/json;charset=UTF-8'}
+    """REST API를 호출하는 역할을 진행하는 클래스"""
+
+    _instance = None
+    _header = {}
 
     def __init__(self, api_url):
         self._api_url = api_url
+        REST._instance = self
 
     def add_login_info(self, token):
         self._header['Authorization'] = f'JWT {token}'
@@ -68,17 +69,18 @@ class REST:
             return ''  # TODO 에러 발생시켜야 함
 
     def post(self, url, param):
-        res = requests.post(self._api_url + url, data=param)
-        if res.status_code == 200:
-            obj = ''
+        res = requests.post(self._api_url + url, data=param, headers=self._header)
+        result = ''
+        if res.ok:
             try:
-                obj = json.loads(res.text)
+                result = json.loads(res.text)
             except JSONDecodeError:
-                obj = ''
-            return obj
+                result = ''
         else:
-            print(res.text)
-            return res.status_code
+            result = f'{res.status_code}|{res.text}'
+            print(result)
+
+        return result
 
     def filepost(self, url, filepath, param={}):
         from pathlib import Path
@@ -86,12 +88,12 @@ class REST:
 
         result = ''
         with open(filepath, 'rb') as f:
-            res = requests.post(self._api_url + url, files={'fileData': (filename, f, 'text/csv')}, data=param)
+            res = requests.post(self._api_url + url, files={'fileData': (filename, f, 'text/csv')}, data=param, headers=self._header)
             if res.ok:
                 result = res.text
             else:
                 print(res.status_code)
                 print(res.text)
-                result = res.status_code + '|' + res.text
+                result = f'{res.status_code}|{res.text}'
 
         return result
