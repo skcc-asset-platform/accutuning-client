@@ -31,6 +31,7 @@ class Client:
                 runtimes {
                     id
                     name
+                    estimatorType
                     metric
                     modelsCnt
                     status
@@ -104,6 +105,25 @@ class Client:
             }
         '''
         self._graphql.execute(query, {'id': experiment.get('dataset').get('id')})
+
+    def set_runtime_settings(self, experiment, estimator_type, metric, target_column_name):
+        '''
+        '''
+
+        query = '''
+            mutation ($id: ID!, $input: PatchRuntimeInput!) {
+                patchRuntime(id: $id, input: $input) {
+                    runtime {
+                        id
+                        name
+                        estimatorType
+                        metric
+                        targetColumnName
+                    }
+                }
+            }
+        '''
+        self._graphql.execute(query, {'id': experiment.get('id'), 'input' : {'estimatorType': estimator_type, 'metric': metric, 'targetColumnName': target_column_name}})
 
     def run(self, experiment):
         '''
