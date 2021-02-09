@@ -1,21 +1,25 @@
-from json.decoder import JSONDecodeError
 import requests
 import json
+from json.decoder import JSONDecodeError
 
 
-class GraphQL:
+class GraphQL:  # TODO GraphQL과 REST를 통합할 수도 있을까? (겹치는게 좀 있음)
     """GraphQL 호출을 담당하는 클래스"""
 
     _instance = None
     _endpoint_url = ''
-    _header = {'Content-Type': 'application/json', 'refresh-token': ''}
+    _header = {}
+    _token = ''
+    _token_exp_time = 0
 
     def __init__(self, endpoint_url, schema_validation=False):
         self._endpoint_url = endpoint_url
         self._schema_validation = schema_validation  # GraphQL의 Schema Validation : 보안때문에 막아놓은 경우 False로 해야함
         GraphQL._instance = self
 
-    def add_login_info(self, token):
+    def add_login_info(self, token, token_exp_time):  # TODO Graphql과 REST 공통으로 빼자
+        self._token = token
+        self._token_exp_time = token_exp_time
         self._header['Authorization'] = f'JWT {token}'
 
     async def execute_async(self, query, param={}):
@@ -52,12 +56,16 @@ class REST:
 
     _instance = None
     _header = {}
+    _token = ''
+    _token_exp_time = 0
 
     def __init__(self, api_url):
         self._api_url = api_url
         REST._instance = self
 
-    def add_login_info(self, token):
+    def add_login_info(self, token, token_exp_time):
+        self._token = token
+        self._token_exp_time = token_exp_time
         self._header['Authorization'] = f'JWT {token}'
 
     def get(self, url):
