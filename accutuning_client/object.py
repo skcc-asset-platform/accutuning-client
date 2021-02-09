@@ -9,9 +9,9 @@ class Experiment(dict):
     """Accu.Tuning의 실험(Experiment)을 담당하는 클래스"""
 
     _display_prop = ['id', 'name', 'dataset.name', 'dataset.colCount', 'status', 'estimatorType', 'metric', 'bestScore', 'modelsCnt', 'deploymentsCnt']
-    _RELOAD_SECOND = 10
+    _RELOAD_SECOND = 10  # TODO Global 설정으로 바꿀까?
 
-    def __init__(self, *args, graphql=GraphQL._instance, rest=REST._instance, dict_obj=None, **kwargs):
+    def __init__(self, *args, graphql=GraphQL._instance, rest=REST._instance, dict_obj=None, **kwargs):  # TODO graphql, rest 대신 Client로 변경
         super().__init__(*args, **kwargs)
         self._graphql = graphql
         self._rest = rest
@@ -23,7 +23,7 @@ class Experiment(dict):
         """객체의 timestamp정보를 업데이트함"""
         self._timestamp = time()
 
-    def __repr__(self):
+    def __repr__(self):  # TODO 화면 표현 검토
         self._reload_if_needs()
         return 'Experiment(' + ', '.join([f'{k}={self.get(k)}' for k in self._display_prop if self.get(k)]) + ')'
 
@@ -52,21 +52,6 @@ class Experiment(dict):
             return obj
         else:
             return super().__getitem__(k)
-
-    # def gets(self, keys):
-    #     """
-    #     get을 여러 Depth로 한꺼번에 진행함
-    #     TODO get()을 overriding 해서 .으로 구분되면 계속 깊이 들어가게 바꾸자.
-    #     """
-
-    #     obj = self
-    #     try:
-    #         for key in keys:
-    #             obj = obj.get(key)
-    #     except Exception:
-    #         obj = None
-
-    #     return obj
 
     def _reload_if_needs(self):
         cur_timestamp = time()
@@ -167,7 +152,7 @@ class Experiment(dict):
 
         return leaderboard
 
-    def deployments(self):
+    def deployments(self):  # TODO Graphql에서 first와 skip은 무엇인가? 용도를 알아보고 지우자.
         """Deployments를 구한다."""
         query = '''
             query runtimeDeployments($id: Int! $first: Int $skip: Int) {
@@ -235,7 +220,7 @@ class Experiments(list):
     """
     실험(Experiment)을 모아놓은 컬렉션
     """
-    def __init__(self, *args, graphql=GraphQL._instance, rest=REST._instance):
+    def __init__(self, *args, graphql=GraphQL._instance, rest=REST._instance):  # TODO 여기는 graphql, rest 필요없을 듯
         super().__init__(*args)
         self._graphql = graphql
         self._rest = rest
@@ -299,7 +284,7 @@ class Leaderboard(list):
         return self[0]
 
 
-class Model(dict):
+class Model(dict):  # TODO reload 필요, 특정 상태만
     def __init__(self, experiment, *args, graphql=GraphQL._instance, rest=REST._instance, dict_obj=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._experiment = experiment
