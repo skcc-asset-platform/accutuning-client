@@ -1,6 +1,6 @@
 import requests
 import json
-from json.decoder import JSONDecodeError
+from accutuning_client.exception import HttpStatusError
 
 
 class GraphQL:  # TODO GraphQL과 REST를 통합할 수도 있을까? (겹치는게 좀 있음)
@@ -70,23 +70,19 @@ class REST:
 
     def get(self, url):
         res = requests.get(self._api_url + url, headers=self._header)
-        if res.status_code == 200:
+        if res.ok:
             obj = json.loads(res.text)
             return obj
         else:
-            return ''  # TODO 에러 발생시켜야 함
+            raise HttpStatusError(res.status_code, res.text)
 
     def post(self, url, param):
         res = requests.post(self._api_url + url, data=param, headers=self._header)
         result = ''
         if res.ok:
-            try:
-                result = json.loads(res.text)
-            except JSONDecodeError:
-                result = ''
+            result = json.loads(res.text)  # TODO 여기 관련 에러처리
         else:
-            result = f'{res.status_code}|{res.text}'
-            print(result)
+            raise HttpStatusError(res.status_code, res.text)
 
         return result
 
@@ -100,8 +96,6 @@ class REST:
             if res.ok:
                 result = res.text
             else:
-                print(res.status_code)
-                print(res.text)
-                result = f'{res.status_code}|{res.text}'
+                raise HttpStatusError(res.status_code, res.text)
 
         return result
