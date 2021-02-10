@@ -7,7 +7,7 @@ class Estimator(Enum):
     CLUSTERING = 'CLUSTERING'
 
 
-class Sklearn(Enum):
+class Sklearn(Enum):  # TODO 삭제예정
     IRIS = 'iris'
     BOSTON = 'boston'
     DIABETES = 'diabetes'
