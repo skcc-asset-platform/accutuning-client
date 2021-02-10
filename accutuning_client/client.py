@@ -26,6 +26,60 @@ class Client:
         token = result.get('tokenAuth').get('token')
         return token
 
+    def preprocessor_config_recommend(self, experiment):
+        '''
+        데이터셋을 기반으로 Preprocessor 방법을 자동으로 추천받아 preprocessor config를 변경합니다.
+        '''
+        query = '''
+            mutation patchRecmdConfig($id:ID!) {
+                patchRecommendationConfig (id: $id) {
+                        dataset {
+                            id
+                            processingStatus
+                    }
+                }
+            }
+        '''
+        self._graphql.execute(query, {'id': experiment.get('dataset').get('id')})
+
+
+    def preprocess(self, experiment):
+        '''
+        지정된 preprocessor config 설정대로 전처리를 실시합니다.
+        '''
+        query = '''
+            mutation preprocess($id:ID!) {
+                preprocess (id: $id) {
+                    dataset {
+                        id
+                        processingStatus
+                    }
+                    error
+                    errorMessage
+                }
+            }
+        '''
+        self._graphql.execute(query, {'id': experiment.get('dataset').get('id')})
+
+    def set_runtime_settings(self, experiment, estimator_type, metric, target_column_name):
+        '''
+        '''
+
+        query = '''
+            mutation ($id: ID!, $input: PatchRuntimeInput!) {
+                patchRuntime(id: $id, input: $input) {
+                    runtime {
+                        id
+                        name
+                        estimatorType
+                        metric
+                        targetColumnName
+                    }
+                }
+            }
+        '''
+        self._graphql.execute(query, {'id': experiment.get('id'), 'input' : {'estimatorType': estimator_type, 'metric': metric, 'targetColumnName': target_column_name}})
+
     def _get_token_expire_time(self, token):
         """발급받은 토큰의 만료시간을 구함"""
         query = '''
