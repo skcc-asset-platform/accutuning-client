@@ -1,4 +1,4 @@
-from accutuning_client.util import GraphQL, REST
+from accutuning_client.util import CallApi
 from accutuning_client.category import Estimator
 from accutuning_client.exception import StatusError
 from time import time, sleep
@@ -11,10 +11,9 @@ class Experiment(dict):
     _display_prop = ['id', 'name', 'dataset.name', 'dataset.colCount', 'status', 'estimatorType', 'metric', 'bestScore', 'modelsCnt', 'deploymentsCnt']
     _RELOAD_SECOND = 10  # TODO Global 설정으로 바꿀까?
 
-    def __init__(self, *args, graphql=GraphQL._instance, rest=REST._instance, dict_obj=None, **kwargs):  # TODO graphql, rest 대신 Client로 변경
+    def __init__(self, api: CallApi, *args, dict_obj=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self._graphql = graphql
-        self._rest = rest
+        self._api = api
         if dict_obj:
             self.update(dict_obj)
         self._update_timestamp()
@@ -90,7 +89,7 @@ class Experiment(dict):
                 }
             }
         '''
-        result = self._graphql.execute(query, {'id': self.get('id')})
+        result = self._api.GRAPHQL(query, {'id': self.get('id')})
         self.update(result.get('runtime'))
         self._update_timestamp()
 
@@ -108,7 +107,7 @@ class Experiment(dict):
                 }
             }
         '''
-        self._graphql.execute(query, {'id': self.get('dataset.id')})
+        self._api.GRAPHQL(query, {'id': self.get('dataset.id')})
 
     def preprocess(self):
         '''
@@ -126,7 +125,7 @@ class Experiment(dict):
                 }
             }
         '''
-        self._graphql.execute(query, {'id': self.get('dataset.id')})
+        self._api.GRAPHQL(query, {'id': self.get('dataset.id')})
 
     def set_runtime_settings(self, estimator_type, metric, target_column_name):
         '''
@@ -144,7 +143,7 @@ class Experiment(dict):
                 }
             }
         '''
-        self._graphql.execute(query, {'id': self.get('id'), 'input': {'estimatorType': estimator_type, 'metric': metric, 'targetColumnName': target_column_name}})
+        self._api.GRAPHQL(query, {'id': self.get('id'), 'input': {'estimatorType': estimator_type, 'metric': metric, 'targetColumnName': target_column_name}})
 
     def run(self):
         """Run AutoML
@@ -169,7 +168,7 @@ class Experiment(dict):
                 }
             }
         '''
-        result = self._graphql.execute(query, {'id': self.get('id')})
+        result = self._api.GRAPHQL(query, {'id': self.get('id')})
         self.update(result.get('startRuntime').get('runtime'))
         self._update_timestamp()
         return self.get('status') == 'learning'
@@ -196,11 +195,11 @@ class Experiment(dict):
                 }
             }
         '''
-        result = self._graphql.execute(query, {'id': self.get('id')})
+        result = self._api.GRAPHQL(query, {'id': self.get('id')})
 
         leaderboard = Leaderboard()
         for model_dict in result.get('runtime').get('leaderboard'):
-            leaderboard.append(Model(experiment=self, graphql=self._graphql, rest=self._rest, dict_obj=model_dict))
+            leaderboard.append(Model(experiment=self, dict_obj=model_dict))
 
         return leaderboard
 
@@ -232,7 +231,7 @@ class Experiment(dict):
                 }
             }
         '''
-        result = self._graphql.execute(query, {'id': self.get('id')})
+        result = self._api.GRAPHQL(query, {'id': self.get('id')})
 
         deployments = Deployments()
         for deployment_dic in result.get('deployments'):
@@ -262,7 +261,7 @@ class Experiment(dict):
                 }
             }
         '''
-        result = self._graphql.execute(query, {'id': self.get('id')})
+        result = self._api.GRAPHQL(query, {'id': self.get('id')})
         columns = result.get('runtime').get('dataset').get('columns')
         target_name = result.get('runtime').get('targetColumnName')
         return Columns([dict(col, isTarget=(col.get('name') == target_name)) for col in columns])
@@ -272,10 +271,8 @@ class Experiments(list):
     """
     실험(Experiment)을 모아놓은 컬렉션
     """
-    def __init__(self, *args, graphql=GraphQL._instance, rest=REST._instance):  # TODO 여기는 graphql, rest 필요없을 듯
+    def __init__(self, *args):
         super().__init__(*args)
-        self._graphql = graphql
-        self._rest = rest
         self._update_timestamp()
 
     def _update_timestamp(self):
@@ -337,11 +334,10 @@ class Leaderboard(list):
 
 
 class Model(dict):  # TODO reload 필요, 특정 상태만
-    def __init__(self, experiment, *args, graphql=GraphQL._instance, rest=REST._instance, dict_obj=None, **kwargs):
+    def __init__(self, experiment, *args, dict_obj=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._experiment = experiment
-        self._graphql = graphql
-        self._rest = rest
+        self._api = self._experiment._api
         if dict_obj:
             self.update(dict_obj)
         self._update_timestamp()
@@ -366,7 +362,7 @@ class Model(dict):  # TODO reload 필요, 특정 상태만
                 }
             }
         '''
-        result = self._graphql.execute(query, {'modelId': self.get('id'), 'modelType': 'ensemble' if self.get('generator') == 'ensemble' else 'model'})
+        result = self._api.GRAPHQL(query, {'modelId': self.get('id'), 'modelType': 'ensemble' if self.get('generator') == 'ensemble' else 'model'})
         print(result)
 
 
@@ -381,8 +377,7 @@ class Deployment(dict):
     def __init__(self, experiment, *args, dict_obj=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._experiment = experiment
-        self._graphql = experiment._graphql
-        self._rest = experiment._rest
+        self._api = experiment._api
         if dict_obj:
             self.update(dict_obj)
 
@@ -390,7 +385,7 @@ class Deployment(dict):
         """인풋값을 가지고 예측을 수행합니다."""
         param = dict(inputs=json.dumps(col_input), target_deployment_id=self.get('id'))
 
-        res = self._rest.post(f'/runtimes/{self._experiment.get("id")}/deployment/predict/', param)
+        res = self._api.POST(f'/runtimes/{self._experiment.get("id")}/deployment/predict/', param)
         prediction_pk = res.get('predictionPk')
 
         sleep(5)  # 예측 자체는 얼마 걸리지 않아 기다림 TODO 추후 비동기로 어떻게 할 수 있을까...
@@ -405,12 +400,12 @@ class Deployment(dict):
                 }
             }
         '''
-        result = self._graphql.execute(query, {'id': prediction_pk})
+        result = self._api.GRAPHQL(query, {'id': prediction_pk})
 
         if not result.get('prediction').get('done'):
             for _ in range(3):
                 sleep(5)
-                result = self._graphql.execute(query, {'id': prediction_pk})
+                result = self._api.GRAPHQL(query, {'id': prediction_pk})
                 if result.get('prediction').get('done'):
                     break
 
