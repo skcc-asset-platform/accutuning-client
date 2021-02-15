@@ -137,7 +137,7 @@ class Experiment(ExtDict):
             }
         '''
         result = self._api.GRAPHQL(query, {'id': self.get('id')})
-        self.update(result.get('startRuntime').get('runtime'))
+        self.update(result.get('startRuntime.runtime'))
         self._update_timestamp()
         return self.get('status') == 'learning'
 
@@ -166,7 +166,7 @@ class Experiment(ExtDict):
         result = self._api.GRAPHQL(query, {'id': self.get('id')})
 
         leaderboard = Leaderboard()
-        for model_dict in result.get('runtime').get('leaderboard'):
+        for model_dict in result.get('runtime.leaderboard'):
             leaderboard.append(Model(experiment=self, dict_obj=model_dict))
 
         return leaderboard
@@ -230,8 +230,8 @@ class Experiment(ExtDict):
             }
         '''
         result = self._api.GRAPHQL(query, {'id': self.get('id')})
-        columns = result.get('runtime').get('dataset').get('columns')
-        target_name = result.get('runtime').get('targetColumnName')
+        columns = result.get('runtime.dataset.columns')
+        target_name = result.get('runtime.targetColumnName')
         return Columns([dict(col, isTarget=(col.get('name') == target_name)) for col in columns])
 
 
@@ -368,7 +368,7 @@ class Deployment(ExtDict):
         '''
         result = self._api.GRAPHQL(query, {'id': prediction_pk})
 
-        return (result.get('prediction').get('done'), result.get('prediction').get('output'))
+        return (result.get('prediction.done'), result.get('prediction.output'))
 
 
 class Columns(list):

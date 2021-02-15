@@ -2,6 +2,7 @@ import requests
 import json
 from time import time, sleep
 from accutuning_client.exception import HttpStatusError, PreviousJobNotDoneError
+from accutuning_client.baseobject import ExtDict
 
 
 class CallApi:
@@ -49,14 +50,14 @@ class CallApi:
 
         client = Client(transport=transport, fetch_schema_from_transport=self._schema_validation)
         result = client.execute(gql(query), variable_values=params)
-        return result
+        return ExtDict(dict_obj=result)
 
     def GET(self, url):  # dictionary에서 쓰는 get과 헷갈릴 수 있어 대문자로 생성함
         """REST API의 GET 방식으로 서버를 호출합니다."""
         res = requests.get(self._rest_api_url + url, headers=self._headers)
         if res.ok:
             obj = json.loads(res.text)
-            return obj
+            return ExtDict(dict_obj=obj)
         else:
             raise HttpStatusError(res.status_code, res.text)
 
@@ -66,10 +67,9 @@ class CallApi:
         result = ''
         if res.ok:
             result = json.loads(res.text)  # TODO 여기 관련 에러처리
+            return ExtDict(dict_obj=result)
         else:
             raise HttpStatusError(res.status_code, res.text)
-
-        return result
 
     def FILEPOST(self, url, filepath, params={}):  # GET Naming에 맞춰 대문자로 생성
         """REST API의 POST 방식으로 서버에 파일을 업로드합니다."""
@@ -96,7 +96,7 @@ class CallApi:
             }
         '''
         result = self._GRAPHQL(query, {'username': id, 'password': password})
-        token = result.get('tokenAuth').get('token')
+        token = result.get('tokenAuth.token')
         return token
 
     def _get_token_expire_time(self, token):
@@ -109,7 +109,7 @@ class CallApi:
             }
         '''
         result = self._GRAPHQL(query, {'token': token})
-        exp = result.get('verifyToken').get('payload').get('exp')
+        exp = result.get('verifyToken.payload.exp')
         return int(exp)
 
     def _refresh_token(self):
@@ -123,8 +123,8 @@ class CallApi:
             }
         '''
         result = self._GRAPHQL(query, {'token': self._token})
-        new_token = result.get('refreshToken').get('token')
-        new_exp = int(result.get('refreshToken').get('payload').get('exp'))
+        new_token = result.get('refreshToken.token')
+        new_exp = int(result.get('refreshToken.payload.exp'))
         self._write_token_info(new_token, new_exp)
 
     def _token_remain_time(self):  # TODO 서버시간, 클라이언트 시간 보정계수 필요?
