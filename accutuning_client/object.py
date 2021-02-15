@@ -1,3 +1,4 @@
+from accutuning_client.baseobject import ExtDict
 from accutuning_client.util import CallApi
 from accutuning_client.category import Estimator
 from accutuning_client.exception import StatusError
@@ -5,52 +6,19 @@ from time import time, sleep
 import json
 
 
-class Experiment(dict):
+class Experiment(ExtDict):
     """Accu.Tuning의 실험(Experiment)을 담당하는 클래스"""
 
     _display_prop = ['id', 'name', 'dataset.name', 'dataset.colCount', 'status', 'estimatorType', 'metric', 'bestScore', 'modelsCnt', 'deploymentsCnt']
     _RELOAD_SECOND = 10  # TODO Global 설정으로 바꿀까?
 
-    def __init__(self, api: CallApi, *args, dict_obj=None, **kwargs):
+    def __init__(self, api: CallApi, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._api = api
-        if dict_obj:
-            self.update(dict_obj)
-        self._update_timestamp()
-
-    def _update_timestamp(self):
-        """객체의 timestamp정보를 업데이트함"""
-        self._timestamp = time()
 
     def __repr__(self):  # TODO 화면 표현 검토
         self._reload_if_needs()
         return 'Experiment(' + ', '.join([f'{k}={self.get(k)}' for k in self._display_prop if self.get(k)]) + ')'
-
-    def get(self, k, *args):
-        """여러 Depth의 get을 한꺼번에 실행함(key안에 "."으로 구분)"""
-        if isinstance(k, str) and '.' in k:
-            obj = super()
-            try:
-                for sub_key in k.split('.'):
-                    obj = obj.get(sub_key, *args)
-            except Exception:
-                obj = None
-            return obj
-        else:
-            return super().get(k, *args)
-
-    def __getitem__(self, k):
-        """여러 Depth의 get을 한꺼번에 실행함(key안에 "."으로 구분)"""
-        if isinstance(k, str) and '.' in k:
-            obj = super()
-            try:
-                for sub_key in k.split('.'):
-                    obj = obj.__getitem__(sub_key)
-            except Exception:
-                raise KeyError(k)
-            return obj
-        else:
-            return super().__getitem__(k)
 
     def _reload_if_needs(self):
         cur_timestamp = time()
@@ -333,18 +301,11 @@ class Leaderboard(list):
         return self[0]
 
 
-class Model(dict):  # TODO reload 필요, 특정 상태만
-    def __init__(self, experiment, *args, dict_obj=None, **kwargs):
+class Model(ExtDict):  # TODO reload 필요, 특정 상태만
+    def __init__(self, experiment, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._experiment = experiment
         self._api = self._experiment._api
-        if dict_obj:
-            self.update(dict_obj)
-        self._update_timestamp()
-
-    def _update_timestamp(self):
-        """객체의 timestamp정보를 업데이트함"""
-        self._timestamp = time()
 
     def deploy(self):
         """model을 deploy한다."""
@@ -372,14 +333,12 @@ class Deployments(list):
         super().__init__(*args)
 
 
-class Deployment(dict):
+class Deployment(ExtDict):
     """Deploy된 모델"""
-    def __init__(self, experiment, *args, dict_obj=None, **kwargs):
+    def __init__(self, experiment, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._experiment = experiment
         self._api = experiment._api
-        if dict_obj:
-            self.update(dict_obj)
 
     def predict(self, col_input):
         """인풋값을 가지고 예측을 수행합니다."""
@@ -388,7 +347,7 @@ class Deployment(dict):
         res = self._api.POST(f'/runtimes/{self._experiment.get("id")}/deployment/predict/', param)
         prediction_pk = res.get('predictionPk')
 
-        sleep(5)  # 예측 자체는 얼마 걸리지 않아 기다림 TODO 추후 비동기로 어떻게 할 수 있을까...
+        sleep(5)  # 예측 자체는 얼마 걸리지 않아 기다림 TODO 추후 비동기로 어떻게 할 수 있을까... TODO 여러번 반복 자체를 함수로?
 
         query = '''
             query queryPrediction($id: Int!) {
