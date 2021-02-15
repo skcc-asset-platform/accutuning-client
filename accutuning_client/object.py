@@ -1,8 +1,8 @@
 from accutuning_client.baseobject import ExtDict
-from accutuning_client.util import CallApi
+from accutuning_client.util import CallApi, Util
 from accutuning_client.category import Estimator
 from accutuning_client.exception import StatusError
-from time import time, sleep
+from time import time
 import json
 
 
@@ -342,13 +342,20 @@ class Deployment(ExtDict):
 
     def predict(self, col_input):
         """인풋값을 가지고 예측을 수행합니다."""
+        prediction_pk = self._predict_request(col_input)
+
+        return Util.wait_and_execute(5, 5, self._predict_result, [prediction_pk], error_msg="아직 예측이 진행중입니다.", sleep_first=True)
+
+    def _predict_request(self, col_input):
+        """예측 수행 요청을 보냅니다."""
         param = dict(inputs=json.dumps(col_input), target_deployment_id=self.get('id'))
 
         res = self._api.POST(f'/runtimes/{self._experiment.get("id")}/deployment/predict/', param)
         prediction_pk = res.get('predictionPk')
+        return prediction_pk
 
-        sleep(5)  # 예측 자체는 얼마 걸리지 않아 기다림 TODO 추후 비동기로 어떻게 할 수 있을까... TODO 여러번 반복 자체를 함수로?
-
+    def _predict_result(self, prediction_pk):
+        """예측 수행한 결과값을 가져옵니다"""
         query = '''
             query queryPrediction($id: Int!) {
                 prediction(id: $id) {
@@ -361,14 +368,7 @@ class Deployment(ExtDict):
         '''
         result = self._api.GRAPHQL(query, {'id': prediction_pk})
 
-        if not result.get('prediction').get('done'):
-            for _ in range(3):
-                sleep(5)
-                result = self._api.GRAPHQL(query, {'id': prediction_pk})
-                if result.get('prediction').get('done'):
-                    break
-
-        return result.get('prediction').get('output')
+        return (result.get('prediction').get('done'), result.get('prediction').get('output'))
 
 
 class Columns(list):

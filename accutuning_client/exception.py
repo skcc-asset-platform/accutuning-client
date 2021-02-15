@@ -15,3 +15,10 @@ class HttpStatusError(Exception):
     def __init__(self, status_code, text):
         self.status_code = status_code
         self.text = text
+
+
+class PreviousJobNotDoneError(Exception):
+    """선행 작업이 끝나지 않았을 경우 내보내는 예외"""
+
+    def __init__(self, message):
+        self.message = message
