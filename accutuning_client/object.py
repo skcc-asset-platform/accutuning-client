@@ -59,7 +59,6 @@ class Experiment(ExtDict):
         '''
         result = self._api.GRAPHQL(query, {'id': self.get('id')})
         self.update(result.get('experiment'))
-        self._update_timestamp()
 
     def preprocessor_config_recommend(self):
         '''
@@ -138,7 +137,6 @@ class Experiment(ExtDict):
         '''
         result = self._api.GRAPHQL(query, {'id': self.get('id')})
         self.update(result.get('startExperiment.experiment'))
-        self._update_timestamp()
         return self.get('status') == 'learning'
 
     def leaderboard(self):
@@ -302,10 +300,45 @@ class Leaderboard(list):
 
 
 class Model(ExtDict):  # TODO reload 필요, 특정 상태만
+    _RELOAD_SECOND = 10  # TODO Global 설정으로 바꿀까?
+
     def __init__(self, experiment, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._experiment = experiment
         self._api = self._experiment._api
+
+    def __repr__(self):  # TODO 화면 표현 검토
+        self._reload_if_needs()
+        return 'Model' + super().__repr__()
+
+    def _reload_if_needs(self):
+        cur_timestamp = time()
+        if (cur_timestamp - self._timestamp) > Model._RELOAD_SECOND and self.get('deployedStatus') != 'DONE':
+            self.reload()
+
+    def reload(self):
+        """model을 reload합니다."""
+        query = '''
+            query reloadModel($modelId: Int!) {
+                baseModel(id: $modelId) {
+                    id
+                    score
+                    trainScore
+                    validScore
+                    testScore
+                    estimatorName
+                    generator
+                    file {
+                        size
+                        sizeHumanized
+                    }
+                    deployedStatus
+                }
+            }
+        '''
+        result = self._api.GRAPHQL(query, {'modelId': self.get('id')})
+        print(result)
+        self.update(result.get('baseModel'))
 
     def deploy(self):
         """model을 deploy한다."""
