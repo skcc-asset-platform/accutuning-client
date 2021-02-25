@@ -31,8 +31,8 @@ class Experiment(ExtDict):
         """
 
         query = '''
-            query getRuntime($id: Int!) {
-                runtime(id: $id) {
+            query getExperiment($id: Int!) {
+                experiment(id: $id) {
                     id
                     name
                     estimatorType
@@ -58,8 +58,7 @@ class Experiment(ExtDict):
             }
         '''
         result = self._api.GRAPHQL(query, {'id': self.get('id')})
-        self.update(result.get('runtime'))
-        self._update_timestamp()
+        self.update(result.get('experiment'))
 
     def preprocessor_config_recommend(self):
         '''
@@ -95,13 +94,13 @@ class Experiment(ExtDict):
         '''
         self._api.GRAPHQL(query, {'id': self.get('dataset.id')})
 
-    def set_runtime_settings(self, estimator_type, metric, target_column_name):
+    def set_experiment_settings(self, estimator_type, metric, target_column_name):
         '''
         '''
         query = '''
-            mutation ($id: ID!, $input: PatchRuntimeInput!) {
-                patchRuntime(id: $id, input: $input) {
-                    runtime {
+            mutation ($id: ID!, $input: PatchExperimentInput!) {
+                patchExperiment(id: $id, input: $input) {
+                    experiment {
                         id
                         name
                         estimatorType
@@ -124,10 +123,10 @@ class Experiment(ExtDict):
             raise StatusError(f'run을 하려면 ready 상태여야 합니다. 현재 {status} 상태입니다.')
 
         query = '''
-            mutation startRuntime($id: ID!) {
-                startRuntime(id: $id) {
+            mutation startExperiment($id: ID!) {
+                startExperiment(id: $id) {
                     __typename
-                    runtime {
+                    experiment {
                         __typename
                         id
                         status
@@ -137,15 +136,14 @@ class Experiment(ExtDict):
             }
         '''
         result = self._api.GRAPHQL(query, {'id': self.get('id')})
-        self.update(result.get('startRuntime.runtime'))
-        self._update_timestamp()
+        self.update(result.get('startExperiment.experiment'))
         return self.get('status') == 'learning'
 
     def leaderboard(self):
         """leaderboard를 리턴한다."""
         query = '''
             query getLeaderboard($id: Int!) {
-                runtime(id: $id) {
+                experiment(id: $id) {
                     leaderboard {
                         id
                         score
@@ -166,7 +164,7 @@ class Experiment(ExtDict):
         result = self._api.GRAPHQL(query, {'id': self.get('id')})
 
         leaderboard = Leaderboard()
-        for model_dict in result.get('runtime.leaderboard'):
+        for model_dict in result.get('experiment.leaderboard'):
             leaderboard.append(Model(experiment=self, dict_obj=model_dict))
 
         return leaderboard
@@ -174,8 +172,8 @@ class Experiment(ExtDict):
     def deployments(self):  # TODO Graphql에서 first와 skip은 무엇인가? 용도를 알아보고 지우자.
         """Deployments를 구한다."""
         query = '''
-            query runtimeDeployments($id: Int! $first: Int $skip: Int) {
-                deployments(runtimeId: $id, first: $first, skip: $skip) {
+            query experimentDeployments($id: Int! $first: Int $skip: Int) {
+                deployments(experimentId: $id, first: $first, skip: $skip) {
                     id
                     name
                     description
@@ -212,7 +210,7 @@ class Experiment(ExtDict):
         """각 컬럼의 정보를 구한다."""
         query = '''
             query columnSummary($id: Int!) {
-                runtime(id: $id) {
+                experiment(id: $id) {
                     id
                     targetColumnName
                     dataset {
@@ -230,8 +228,8 @@ class Experiment(ExtDict):
             }
         '''
         result = self._api.GRAPHQL(query, {'id': self.get('id')})
-        columns = result.get('runtime.dataset.columns')
-        target_name = result.get('runtime.targetColumnName')
+        columns = result.get('experiment.dataset.columns')
+        target_name = result.get('experiment.targetColumnName')
         return Columns([dict(col, isTarget=(col.get('name') == target_name)) for col in columns])
 
 
@@ -302,10 +300,45 @@ class Leaderboard(list):
 
 
 class Model(ExtDict):  # TODO reload 필요, 특정 상태만
+    _RELOAD_SECOND = 10  # TODO Global 설정으로 바꿀까?
+
     def __init__(self, experiment, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._experiment = experiment
         self._api = self._experiment._api
+
+    def __repr__(self):  # TODO 화면 표현 검토
+        self._reload_if_needs()
+        return 'Model' + super().__repr__()
+
+    def _reload_if_needs(self):
+        cur_timestamp = time()
+        if (cur_timestamp - self._timestamp) > Model._RELOAD_SECOND and self.get('deployedStatus') != 'DONE':
+            self.reload()
+
+    def reload(self):
+        """model을 reload합니다."""
+        query = '''
+            query reloadModel($modelId: Int!) {
+                baseModel(id: $modelId) {
+                    id
+                    score
+                    trainScore
+                    validScore
+                    testScore
+                    estimatorName
+                    generator
+                    file {
+                        size
+                        sizeHumanized
+                    }
+                    deployedStatus
+                }
+            }
+        '''
+        result = self._api.GRAPHQL(query, {'modelId': self.get('id')})
+        print(result)
+        self.update(result.get('baseModel'))
 
     def deploy(self):
         """model을 deploy한다."""
@@ -350,7 +383,7 @@ class Deployment(ExtDict):
         """예측 수행 요청을 보냅니다."""
         param = dict(inputs=json.dumps(col_input), target_deployment_id=self.get('id'))
 
-        res = self._api.POST(f'/runtimes/{self._experiment.get("id")}/deployment/predict/', param)
+        res = self._api.POST(f'/experiments/{self._experiment.get("id")}/deployment/predict/', param)
         prediction_pk = res.get('predictionPk')
         return prediction_pk
 

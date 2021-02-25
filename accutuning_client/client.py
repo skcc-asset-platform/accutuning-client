@@ -44,8 +44,8 @@ class Client:
         전체 experiments를 가져옴
         """
         query = '''
-            query getAllRuntimes {
-                runtimes {
+            query getAllExperiments {
+                experiments {
                     id
                     name
                     metric
@@ -67,7 +67,7 @@ class Client:
         result = self._api.GRAPHQL(query)
 
         exps = Experiments()  # TODO 이런 방식으로 셋팅할 수밖에 없을까? -> list comprehension은 너무 길다.
-        for exp_obj in result.get('runtimes'):
+        for exp_obj in result.get('experiments'):
             exp = Experiment(api=self._api, dict_obj=exp_obj)
             exps.append(exp)
 
