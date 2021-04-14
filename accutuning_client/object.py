@@ -60,10 +60,15 @@ class Experiment(ExtDict):
         result = self._api.GRAPHQL(query, {'id': self.get('id')})
         self.update(result.get('experiment'))
 
-    def preprocessor_config_recommend(self):
+    def recommend(self):
         '''
         데이터셋을 기반으로 Preprocessor 방법을 자동으로 추천받아 preprocessor config를 변경합니다.
         '''
+
+        self._reload_if_needs()
+        if (status := self.get('status')) != 'ready':
+            raise StatusError(f'추천 기능은 ready 상태에서만 동작합니다. 현재 {status} 상태입니다.')
+
         query = '''
             mutation patchRecmdConfig($id:ID!) {
                 patchRecommendationConfig (id: $id) {
@@ -74,25 +79,8 @@ class Experiment(ExtDict):
                 }
             }
         '''
-        self._api.GRAPHQL(query, {'id': self.get('dataset.id')})
-
-    def preprocess(self):
-        '''
-        지정된 preprocessor config 설정대로 전처리를 실시합니다.
-        '''
-        query = '''
-            mutation preprocess($id:ID!) {
-                preprocess (id: $id) {
-                    dataset {
-                        id
-                        processingStatus
-                    }
-                    error
-                    errorMessage
-                }
-            }
-        '''
-        self._api.GRAPHQL(query, {'id': self.get('dataset.id')})
+        result = self._api.GRAPHQL(query, {'id': self.get('dataset.id')})
+        return result.get('patchRecommendationConfig.dataset.processingStatus') == 'READY'
 
     def set_experiment_settings(self, estimator_type, metric, target_column_name):
         '''
