@@ -25,10 +25,7 @@ experiments = client.experiments()
 experiment_new = client.create_experiment_from_file('/Users/ahaljh/Downloads/iris1.csv')
 
 # 전처리를 추천받아 preprocessor config를 변경 
-experiment_new.preprocessor_config_recommend()
-
-# 지정한 config 설정대로 전처리를 실시
-experiment_new.preprocess()
+experiment_new.recommend()
 
 # Run Automl
 experiment_new.run()
